@@ -2,7 +2,6 @@ package bitbucket
 
 import (
 	"encoding/json"
-
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -23,10 +22,13 @@ type ProjectOptions struct {
 	Key         string `json:"key"`
 	Description string `json:"description"`
 	IsPrivate   bool   `json:"is_private"`
+	Limit 		int	   `json:"limit"`
+	Start 		int	   `json:"start"`
+	IsLastpage 	bool   `json:"IsLastpage"`
 }
 
 func (t *Workspace) GetProject(opt *ProjectOptions) (*Project, error) {
-	urlStr := t.c.requestUrl("/workspaces/%s/projects/%s", opt.Owner, opt.Key)
+	urlStr := t.c.requestUrl("%s/projects/%s", opt.Owner, opt.Key)
 	response, err := t.c.execute("GET", urlStr, "")
 	if err != nil {
 		return nil, err
@@ -35,12 +37,23 @@ func (t *Workspace) GetProject(opt *ProjectOptions) (*Project, error) {
 	return decodeProject(response)
 }
 
+//func (t *Workspace) GetAllProject(opt *ProjectOptions) (*map[string]Project, error) {
+func (t *Workspace) GetAllProject(opt *ProjectOptions) (any, error) {
+	urlStr := t.c.requestUrl("/projects?limit=%d&start=%d", opt.Limit,opt.Start)
+	response, err := t.c.execute("GET", urlStr, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return response,err
+}
+
 func (t *Workspace) CreateProject(opt *ProjectOptions) (*Project, error) {
 	data, err := t.buildProjectBody(opt)
 	if err != nil {
 		return nil, err
 	}
-	urlStr := t.c.requestUrl("/workspaces/%s/projects", opt.Owner)
+	urlStr := t.c.requestUrl("%s/projects", opt.Owner)
 	response, err := t.c.execute("POST", urlStr, data)
 	if err != nil {
 		return nil, err
@@ -50,7 +63,7 @@ func (t *Workspace) CreateProject(opt *ProjectOptions) (*Project, error) {
 }
 
 func (t *Workspace) DeleteProject(opt *ProjectOptions) (interface{}, error) {
-	urlStr := t.c.requestUrl("/workspaces/%s/projects/%s", opt.Owner, opt.Key)
+	urlStr := t.c.requestUrl("%s/projects/%s", opt.Owner, opt.Key)
 	return t.c.execute("DELETE", urlStr, "")
 }
 
@@ -59,7 +72,7 @@ func (t *Workspace) UpdateProject(opt *ProjectOptions) (*Project, error) {
 	if err != nil {
 		return nil, err
 	}
-	urlStr := t.c.requestUrl("/workspaces/%s/projects/%s", opt.Owner, opt.Key)
+	urlStr := t.c.requestUrl("%s/projects/%s", opt.Owner, opt.Key)
 	response, err := t.c.execute("PUT", urlStr, data)
 	if err != nil {
 		return nil, err
@@ -108,3 +121,4 @@ func decodeProject(project interface{}) (*Project, error) {
 	err := mapstructure.Decode(project, &projectEntry)
 	return &projectEntry, err
 }
+
