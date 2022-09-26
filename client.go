@@ -249,6 +249,25 @@ func (c *Client) execute(method string, urlStr string, text string) (interface{}
 	return result, nil
 }
 
+func (c *Client) executev2(method string, urlStr string, text string) (interface{}, error) {
+	body := strings.NewReader(text)
+	req, err := http.NewRequest(method, urlStr, body)
+	if err != nil {
+		return nil, err
+	}
+	if text != "" {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	c.authenticateRequest(req)
+	result, err := c.doRequestv2(req, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func (c *Client) executePaginated(method string, urlStr string, text string) (interface{}, error) {
 	if c.Pagelen != DEFAULT_PAGE_LENGTH {
 		urlObj, err := url.Parse(urlStr)
@@ -355,6 +374,30 @@ func (c *Client) doRequest(req *http.Request, emptyResponse bool) (interface{}, 
 	if err := json.Unmarshal(responseBytes, &result); err != nil {
 		return responseBytes, err
 	}
+	return result, nil
+}
+
+func (c *Client) doRequestv2(req *http.Request, emptyResponse bool) (interface{}, error) {
+	resBody, err := c.doRawRequest(req, emptyResponse)
+	if err != nil {
+		return nil, err
+	}
+	if emptyResponse || resBody == nil {
+		return nil, nil
+	}
+
+	defer resBody.Close()
+
+	responseBytes, err := ioutil.ReadAll(resBody)
+	if err != nil {
+		return resBody, err
+	}
+
+	var result interface{}
+	result = responseBytes
+	//if err := json.Unmarshal(responseBytes, &result); err != nil {
+	//	return responseBytes, err
+	//}
 	return result, nil
 }
 

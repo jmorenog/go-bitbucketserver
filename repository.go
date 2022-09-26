@@ -120,7 +120,9 @@ type PipelineVariable struct {
 
 type PipelineKeyPair struct {
 	Type       string
-	Public_key string
+	Uuid       string
+	PublicKey  string
+	PrivateKey string
 }
 
 type PipelineBuildNumber struct {
@@ -322,6 +324,64 @@ func (r *Repository) GetFileContent(ro *RepositoryFilesOptions) ([]byte, error) 
 	return content, nil
 }
 
+//===============================================================================================
+///rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/files/{path:.*}
+func (r *Repository) buildContentsURLv2(ro *RepositoryFilesOptions) (string, error) {
+	filePath := path.Join("projects", ro.Owner, "/repos",ro.RepoSlug,ro.At )
+
+	urlStr := r.c.requestUrl(filePath)
+	url, err := url.Parse(urlStr)
+	if err != nil {
+		return "", err
+	}
+
+	return url.String(), nil
+}
+
+func (r *Repository) GetFileContentv2(ro *RepositoryFilesOptions) ([]byte, error) {
+	urlStr, err := r.buildContentsURLv2(ro)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := r.c.executev2("GET", urlStr, "")
+	if err != nil {
+		return nil, err
+	}
+
+	content, ok := response.([]byte)
+	if !ok {
+		return nil, fmt.Errorf("requested path is not a file")
+	}
+
+	return content, nil
+}
+
+
+func (r *Repository) GetFilesAtv2(ro *RepositoryFilesOptions) (any, error) {
+	urlStr, err := r.buildContentsURLv2(ro)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := r.c.execute("GET", urlStr, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return response,nil
+}
+
+func (r *Repository) GetRepoList(ro *RepositoryOptions) (interface{}, error) {
+	urlStr := r.c.requestUrl("/projects/%s/repos", ro.Owner)
+	response, err := r.c.execute("GET", urlStr, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return response,nil
+}
+//===============================================================================================
 func (r *Repository) ListFiles(ro *RepositoryFilesOptions) ([]RepositoryFile, error) {
 	urlStr, err := r.buildContentsURL(ro)
 	if err != nil {
@@ -1627,7 +1687,7 @@ func decodeDeploymentVariables(response string) (*DeploymentVariables, error) {
 			if errs == nil {
 				errs = err
 			} else {
-				errs = fmt.Errorf("%w; deployment variable %d: %v", errs, idx, err)
+				errs = fmt.Errorf("%w; deployment variable %d: %w", errs, idx, err)
 			}
 		} else {
 			variablesArray = append(variablesArray, variable)

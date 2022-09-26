@@ -180,6 +180,8 @@ type RepositoryFilesOptions struct {
 	Ref      string `json:"ref"`
 	Path     string `json:"path"`
 	MaxDepth int    `json:"max_depth"`
+	At string `json:"at"`
+	Filetoget string `json:"files"`
 }
 
 type RepositoryBlobOptions struct {
